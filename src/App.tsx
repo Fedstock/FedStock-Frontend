@@ -55,9 +55,9 @@ export default function App() {
 
     switch (activePage) {
       case "upload":
-        return dashboardData.source === "csv"
-          ? "올린 자료가 반영됐습니다. 재고 점검과 발주 추천을 확인하세요."
-          : "판매·재고 자료를 올리면 샘플 화면이 실제 자료 기준으로 바뀝니다.";
+        return dashboardData.source === "ai"
+            ? "AI 모델 분석 결과가 반영됐습니다. 재고 점검과 발주 추천을 확인하세요."
+            : "판매·재고 자료를 올리면 로컬 AI 모델로 분석합니다.";
       case "inventory":
         return `품절 위험 ${criticalCount}개를 먼저 확인하고, 여유 재고는 뒤로 미뤄도 됩니다.`;
       case "orders":

@@ -1,10 +1,10 @@
-import type { PageDefinition, PageId } from "../../types/dashboard";
+import type { DashboardData, PageDefinition, PageId } from "../../types/dashboard";
 import { cn } from "../../lib/utils";
 
 type AppHeaderProps = {
   pages: PageDefinition[];
   activePage: PageId;
-  dataSource: "mock" | "csv";
+  dataSource: DashboardData["source"];
   summary?: string;
   isGlass?: boolean;
 };

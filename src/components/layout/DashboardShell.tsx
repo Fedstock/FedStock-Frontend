@@ -1,5 +1,5 @@
 import { useState, type ReactNode, type UIEvent } from "react";
-import type { PageDefinition, PageId } from "../../types/dashboard";
+import type { DashboardData, PageDefinition, PageId } from "../../types/dashboard";
 import { AppHeader } from "./AppHeader";
 import { AppSidebar } from "./AppSidebar";
 
@@ -7,7 +7,7 @@ type DashboardShellProps = {
   pages: PageDefinition[];
   activePage: PageId;
   onPageChange: (page: PageId) => void;
-  dataSource: "mock" | "csv";
+  dataSource: DashboardData["source"];
   headerSummary?: string;
   children: ReactNode;
 };

@@ -112,7 +112,7 @@ export type CsvStatus = {
 };
 
 export type DashboardData = {
-  source: "mock" | "csv";
+  source: "mock" | "ai";
   overviewMetrics: Metric[];
   salesTrend: SalesTrendPoint[];
   topProducts: TopProduct[];

@@ -2,6 +2,8 @@
 
 Fedstock은 샘플 데이터나 직접 올린 CSV 자료를 바탕으로 일일 판매량, 재고 위험도, 발주 추천 등을 확인할 수 있는 가벼운 매장 운영 대시보드입니다.
 
+기능 설명은 [FEATURES.md](./FEATURES.md)에서 확인할 수 있습니다.
+
 ## Tech Stack
 
 - React 19
@@ -69,7 +71,7 @@ src/
     dashboard/   대시보드 전용 카드, 테이블, 배지, 차트
     layout/      전체 셸, 상단 고정 헤더, 사이드바
     ui/          shared UI primitives
-  lib/           공통으로 쓰이는 기본 UI 컴포넌트  
+  lib/           mock data, CSV processing, utility functions
   pages/         각 탭별 최상위 화면 페이지
   types/         전역에서 사용하는 타입 정의
 ```

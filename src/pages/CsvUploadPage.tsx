@@ -5,7 +5,7 @@ import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "../components/ui/Card";
 import type { CsvStatus, DashboardData, ValidationItem } from "../types/dashboard";
-import { buildDashboardFromCsv, parseCsvText } from "../lib/data-processing";
+import { analyzeCsvWithAi } from "../lib/ai-api";
 import { formatNumber } from "../lib/utils";
 
 type CsvUploadPageProps = {
@@ -33,12 +33,20 @@ function ValidationRow({ item }: { item: ValidationItem }) {
 export function CsvUploadPage({ csvStatus, onCsvLoaded }: CsvUploadPageProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleFile = async (file: File) => {
-    const text = await file.text();
-    const rows = parseCsvText(text);
-    const result = buildDashboardFromCsv(file.name, rows);
-    onCsvLoaded(result.status, result.data);
+    setIsAnalyzing(true);
+    setErrorMessage(null);
+    try {
+      const result = await analyzeCsvWithAi(file);
+      onCsvLoaded(result.status, result.data);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "AI 서버 분석에 실패했습니다.");
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
@@ -64,19 +72,24 @@ export function CsvUploadPage({ csvStatus, onCsvLoaded }: CsvUploadPageProps) {
             <div className="mb-4 rounded-3xl bg-white p-4 text-[#2563EB] shadow-sm">
               <Upload className="h-8 w-8" aria-hidden="true" />
             </div>
-            <h3 className="text-xl font-semibold text-[#111827]">판매·재고 파일을 올려주세요</h3>
+            <h3 className="text-xl font-semibold text-[#111827]">AI로 분석할 판매·재고 파일을 올려주세요</h3>
             <p className="mt-2 max-w-xl text-sm leading-6 text-[#6B7280]">
-              상품명, 판매일, 판매량, 현재 재고, 판매가가 들어 있어야 합니다. 부족한 계산값은 화면에서 자동으로 계산합니다.
+              CSV는 로컬 AI 서버로 전송되고, PA-CFL LSTM 모델이 만든 결과만 화면에 반영됩니다.
             </p>
             <div className="mt-5 flex flex-wrap justify-center gap-2">
-              <Button type="button" onClick={() => inputRef.current?.click()}>
+              <Button type="button" onClick={() => inputRef.current?.click()} disabled={isAnalyzing}>
                 <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />
-                파일 선택
+                {isAnalyzing ? "AI 분석 중" : "파일 선택"}
               </Button>
-              <Button type="button" variant="outline" onClick={() => inputRef.current?.click()}>
+              <Button type="button" variant="outline" onClick={() => inputRef.current?.click()} disabled={isAnalyzing}>
                 파일 바꾸기
               </Button>
             </div>
+            {errorMessage ? (
+              <div className="mt-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {errorMessage}
+              </div>
+            ) : null}
             <input
               ref={inputRef}
               className="sr-only"

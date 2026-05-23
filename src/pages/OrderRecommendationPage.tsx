@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
+import { ShoppingCart } from "lucide-react";
 import { MetricCard } from "../components/dashboard/MetricCard";
 import { DataTable } from "../components/dashboard/DataTable";
 import { PriorityBadge } from "../components/dashboard/StatusBadge";
+import { CardDescription, CardTitle } from "../components/ui/Card";
 import { Tabs } from "../components/ui/Tabs";
 import type { DashboardData, OrderRecommendation, Priority } from "../types/dashboard";
 import { formatNumber } from "../lib/utils";
