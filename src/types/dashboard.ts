@@ -2,9 +2,7 @@ import type { LucideIcon } from "lucide-react";
 
 export type PageId =
   | "overview"
-  | "upload"
-  | "inventory"
-  | "orders";
+  | "upload";
 
 export type Trend = "up" | "down" | "stable";
 export type InventoryStatus = "critical" | "warning" | "normal" | "overstock";
@@ -49,6 +47,8 @@ export type ForecastItem = {
   itemName: string;
   category: string;
   forecastQty: number;
+  forecastDailyQty?: number;
+  forecastHorizonDays?: number;
   rollingMean7: number;
   rollingMean28: number;
   wowChangePct: number;
@@ -112,10 +112,11 @@ export type CsvStatus = {
 };
 
 export type DashboardData = {
-  source: "mock" | "ai";
+  source: "empty" | "ai";
   overviewMetrics: Metric[];
   salesTrend: SalesTrendPoint[];
   topProducts: TopProduct[];
+  forecastItems: ForecastItem[];
   forecastSeries: ForecastPoint[];
   inventoryMetrics: Metric[];
   inventoryItems: InventoryItem[];

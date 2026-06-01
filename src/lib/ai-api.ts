@@ -13,10 +13,11 @@ type ApiMetric = Omit<Metric, "icon"> & {
   iconKey?: keyof typeof iconMap;
 };
 
-type ApiDashboardData = Omit<DashboardData, "overviewMetrics" | "inventoryMetrics" | "orderMetrics"> & {
+type ApiDashboardData = Omit<DashboardData, "overviewMetrics" | "inventoryMetrics" | "orderMetrics" | "forecastItems"> & {
   overviewMetrics: ApiMetric[];
   inventoryMetrics: ApiMetric[];
   orderMetrics: ApiMetric[];
+  forecastItems?: DashboardData["forecastItems"];
 };
 
 type AnalyzeCsvResponse = {
@@ -45,6 +46,7 @@ function hydrateMetrics(metrics: ApiMetric[]): Metric[] {
 function hydrateDashboardData(data: ApiDashboardData): DashboardData {
   return {
     ...data,
+    forecastItems: data.forecastItems ?? [],
     overviewMetrics: hydrateMetrics(data.overviewMetrics),
     inventoryMetrics: hydrateMetrics(data.inventoryMetrics),
     orderMetrics: hydrateMetrics(data.orderMetrics),
