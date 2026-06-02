@@ -13,11 +13,12 @@ type ApiMetric = Omit<Metric, "icon"> & {
   iconKey?: keyof typeof iconMap;
 };
 
-type ApiDashboardData = Omit<DashboardData, "overviewMetrics" | "inventoryMetrics" | "orderMetrics" | "forecastItems"> & {
+type ApiDashboardData = Omit<DashboardData, "overviewMetrics" | "inventoryMetrics" | "orderMetrics" | "forecastItems" | "forecastDailySeries"> & {
   overviewMetrics: ApiMetric[];
   inventoryMetrics: ApiMetric[];
   orderMetrics: ApiMetric[];
   forecastItems?: DashboardData["forecastItems"];
+  forecastDailySeries?: DashboardData["forecastDailySeries"];
 };
 
 type AnalyzeCsvResponse = {
@@ -47,6 +48,7 @@ function hydrateDashboardData(data: ApiDashboardData): DashboardData {
   return {
     ...data,
     forecastItems: data.forecastItems ?? [],
+    forecastDailySeries: data.forecastDailySeries ?? [],
     overviewMetrics: hydrateMetrics(data.overviewMetrics),
     inventoryMetrics: hydrateMetrics(data.inventoryMetrics),
     orderMetrics: hydrateMetrics(data.orderMetrics),
@@ -59,7 +61,7 @@ function getApiBaseUrl() {
 
 function extractErrorMessage(payload: unknown) {
   if (typeof payload === "string") return payload;
-  if (!payload || typeof payload !== "object") return "AI 서버 분석에 실패했습니다.";
+  if (!payload || typeof payload !== "object") return "파일을 분석하지 못했습니다.";
 
   const detail = "detail" in payload ? (payload as { detail?: unknown }).detail : undefined;
   if (typeof detail === "string") return detail;
@@ -71,7 +73,7 @@ function extractErrorMessage(payload: unknown) {
     const message = (payload as { message?: unknown }).message;
     if (typeof message === "string") return message;
   }
-  return "AI 서버 분석에 실패했습니다.";
+  return "파일을 분석하지 못했습니다.";
 }
 
 export async function analyzeCsvWithAi(file: File) {

@@ -62,6 +62,29 @@ export type ForecastPoint = {
   predicted: number;
 };
 
+export type ForecastWindow = {
+  anchorDate: string;
+  startDate: string;
+  endDate: string;
+  horizonDays: number;
+  label: string;
+};
+
+export type ForecastDailyPoint = {
+  date: string;
+  isoDate: string;
+  sales: number;
+};
+
+export type ForecastDailySeries = {
+  itemId: string;
+  itemName: string;
+  category: string;
+  forecastQty: number;
+  forecastHorizonDays: number;
+  points: ForecastDailyPoint[];
+};
+
 export type InventoryItem = {
   itemId: string;
   itemName: string;
@@ -114,9 +137,11 @@ export type CsvStatus = {
 export type DashboardData = {
   source: "empty" | "ai";
   overviewMetrics: Metric[];
+  forecastWindow?: ForecastWindow;
   salesTrend: SalesTrendPoint[];
   topProducts: TopProduct[];
   forecastItems: ForecastItem[];
+  forecastDailySeries: ForecastDailySeries[];
   forecastSeries: ForecastPoint[];
   inventoryMetrics: Metric[];
   inventoryItems: InventoryItem[];

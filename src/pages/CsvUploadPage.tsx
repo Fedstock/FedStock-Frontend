@@ -1,4 +1,5 @@
-import { useRef, useState, type DragEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
+import { createPortal } from "react-dom";
 import {
   AlertTriangle,
   CheckCircle,
@@ -20,6 +21,15 @@ type CsvUploadPageProps = {
   csvStatus: CsvStatus;
   onCsvLoaded: (status: CsvStatus, data: DashboardData) => void;
 };
+
+const loadingSteps = [
+  "판매 이력 파일을 확인하는 중입니다.",
+  "비슷한 판매 흐름의 매장을 찾는 중입니다.",
+  "상품별 예상 판매량을 계산하는 중입니다.",
+  "결과 화면에 보여줄 내용을 정리하는 중입니다.",
+];
+
+type AnalysisState = "idle" | "loading" | "complete";
 
 type UploadTargetProps = {
   icon: LucideIcon;
@@ -105,25 +115,137 @@ function ValidationRow({ item }: { item: ValidationItem }) {
   );
 }
 
+function FullScreenAnalysisOverlay({
+  state,
+  stepIndex,
+  isLeaving,
+}: {
+  state: Exclude<AnalysisState, "idle">;
+  stepIndex: number;
+  isLeaving: boolean;
+}) {
+  const isComplete = state === "complete";
+
+  useEffect(() => {
+    if (!isComplete) return;
+
+    try {
+      const AudioContextCtor =
+        window.AudioContext ??
+        (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextCtor) return;
+
+      const context = new AudioContextCtor();
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(880, context.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(1320, context.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.0001, context.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.08, context.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.18);
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start();
+      oscillator.stop(context.currentTime + 0.2);
+      window.setTimeout(() => void context.close(), 260);
+    } catch {
+      // Browser audio policies can block this; the visual completion still works.
+    }
+  }, [isComplete]);
+
+  return createPortal(
+    <div className={`fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/32 px-5 backdrop-blur-md ${isLeaving ? "analysis-overlay-out" : "analysis-overlay-in"}`}>
+      <div className={`w-full max-w-[680px] rounded-[42px] border border-white/80 bg-white/95 px-10 py-12 text-center shadow-[0_38px_120px_rgba(15,23,42,0.24)] sm:px-14 sm:py-14 ${isLeaving ? "analysis-modal-out" : "analysis-modal-in"}`}>
+        <div className="mx-auto flex h-32 w-32 items-center justify-center">
+          {isComplete ? (
+            <div className="relative flex h-24 w-24 items-center justify-center">
+              <span className="completion-pulse absolute inset-0 rounded-full bg-emerald-400/20" />
+              <svg className="relative h-24 w-24" viewBox="0 0 80 80" aria-hidden="true">
+                <circle
+                  className="completion-ring"
+                  cx="40"
+                  cy="40"
+                  r="31"
+                  fill="none"
+                  stroke="#10B981"
+                  strokeWidth="6"
+                  strokeLinecap="round"
+                />
+                <path
+                  className="completion-check"
+                  d="M25 41.5 35.5 52 56 30"
+                  fill="none"
+                  stroke="#10B981"
+                  strokeWidth="7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+          ) : (
+            <div className="h-24 w-24 animate-spin rounded-full border-[7px] border-blue-100 border-t-blue-600" />
+          )}
+        </div>
+
+        <h2 className="mt-7 text-3xl font-extrabold tracking-tight text-slate-950 transition-all duration-500">
+          {isComplete ? "예측이 완료되었습니다" : loadingSteps[stepIndex]}
+        </h2>
+        <p className="mx-auto mt-5 max-w-[520px] text-base leading-7 text-slate-500">
+          {isComplete
+            ? "잠시 후 판매 예측 결과 화면으로 이동합니다."
+            : "업로드한 판매 이력을 바탕으로 상품별 예상 판매량을 준비하고 있습니다."}
+        </p>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 export function CsvUploadPage({
   csvStatus,
   onCsvLoaded,
 }: CsvUploadPageProps) {
   const forecastInputRef = useRef<HTMLInputElement | null>(null);
   const [isDraggingForecast, setIsDraggingForecast] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisState, setAnalysisState] = useState<AnalysisState>("idle");
+  const [isOverlayLeaving, setIsOverlayLeaving] = useState(false);
+  const [loadingStepIndex, setLoadingStepIndex] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const isAnalyzing = analysisState !== "idle";
+
+  useEffect(() => {
+    if (analysisState !== "loading") {
+      setLoadingStepIndex(0);
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setLoadingStepIndex((current) => Math.min(current + 1, loadingSteps.length - 1));
+    }, 900);
+
+    return () => window.clearInterval(intervalId);
+  }, [analysisState]);
 
   const handleForecastFile = async (file: File) => {
-    setIsAnalyzing(true);
+    setAnalysisState("loading");
+    setIsOverlayLeaving(false);
+    setLoadingStepIndex(0);
     setErrorMessage(null);
     try {
       const result = await analyzeCsvWithAi(file);
+      setLoadingStepIndex(loadingSteps.length - 1);
+      setAnalysisState("complete");
+      await new Promise((resolve) => window.setTimeout(resolve, 1400));
+      setIsOverlayLeaving(true);
+      await new Promise((resolve) => window.setTimeout(resolve, 360));
       onCsvLoaded(result.status, result.data);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "AI 서버 분석에 실패했습니다.");
-    } finally {
-      setIsAnalyzing(false);
+      setErrorMessage(error instanceof Error ? error.message : "파일을 분석하지 못했습니다. 잠시 후 다시 시도하세요.");
+      setIsOverlayLeaving(true);
+      await new Promise((resolve) => window.setTimeout(resolve, 240));
+      setAnalysisState("idle");
+      setIsOverlayLeaving(false);
     }
   };
 
@@ -134,9 +256,9 @@ export function CsvUploadPage({
           <div className="grid gap-4">
             <UploadTarget
               icon={Upload}
-              title="예상 판매량 파일"
-              description="판매 이력 CSV를 로컬 AI 서버로 보내 상품별 예상 판매량을 계산합니다."
-              buttonLabel={isAnalyzing ? "AI 분석 중" : "파일 선택"}
+              title="판매 이력 파일"
+              description="판매 이력 CSV를 올리면 상품별 예상 판매량을 계산합니다."
+              buttonLabel={isAnalyzing ? "계산 중..." : "파일 선택"}
               selectedFileName={csvStatus.fileName}
               disabled={isAnalyzing}
               isActive={isDraggingForecast}
@@ -166,12 +288,12 @@ export function CsvUploadPage({
           <CardHeader>
             <div>
               <CardTitle>파일 요약</CardTitle>
-              <CardDescription>예상 판매량 분석에 사용된 파일입니다.</CardDescription>
+              <CardDescription>예상 판매량 계산에 사용된 파일입니다.</CardDescription>
             </div>
             <Database className="h-5 w-5 text-[#6B7280]" aria-hidden="true" />
           </CardHeader>
           {csvStatus.state === "empty" ? (
-            <EmptyState icon={FileSpreadsheet} title="아직 올린 파일이 없습니다" description="예상 판매량 파일을 올리면 자료 개수, 상품 수, 기간이 표시됩니다." />
+            <EmptyState icon={FileSpreadsheet} title="아직 올린 파일이 없습니다" description="판매 이력 파일을 올리면 자료 개수, 상품 수, 기간이 표시됩니다." />
           ) : (
             <div className="space-y-4">
               <div>
@@ -206,7 +328,7 @@ export function CsvUploadPage({
           <CardHeader>
             <div>
               <CardTitle>필수 항목 확인</CardTitle>
-              <CardDescription>예상 판매량 분석에 필요한 항목을 확인합니다.</CardDescription>
+              <CardDescription>판매량 예측에 필요한 항목을 확인합니다.</CardDescription>
             </div>
           </CardHeader>
           {csvStatus.validation.length ? (
@@ -216,15 +338,15 @@ export function CsvUploadPage({
               ))}
             </div>
           ) : (
-            <EmptyState icon={CheckCircle} title="확인 대기 중" description="예상 판매량 파일을 올리면 필요한 항목이 들어 있는지 확인합니다." />
+            <EmptyState icon={CheckCircle} title="확인 대기 중" description="판매 이력 파일을 올리면 필요한 항목이 들어 있는지 확인합니다." />
           )}
         </Card>
 
         <Card>
           <CardHeader>
             <div>
-              <CardTitle>오류 및 경고</CardTitle>
-              <CardDescription>업로드 품질을 빠르게 점검합니다.</CardDescription>
+              <CardTitle>처리 안내</CardTitle>
+              <CardDescription>판매량 예측 과정에서 참고할 내용을 알려드립니다.</CardDescription>
             </div>
           </CardHeader>
           {csvStatus.issues.length ? (
@@ -250,6 +372,9 @@ export function CsvUploadPage({
           )}
         </Card>
       </div>
+      {analysisState !== "idle" ? (
+        <FullScreenAnalysisOverlay state={analysisState} stepIndex={loadingStepIndex} isLeaving={isOverlayLeaving} />
+      ) : null}
     </div>
   );
 }

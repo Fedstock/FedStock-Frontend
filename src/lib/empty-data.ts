@@ -14,6 +14,7 @@ export const emptyDashboardData: DashboardData = {
   salesTrend: [],
   topProducts: [],
   forecastItems: [],
+  forecastDailySeries: [],
   forecastSeries: [],
   inventoryMetrics: [],
   inventoryItems: [],
